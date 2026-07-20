@@ -1,0 +1,158 @@
+{
+  "vhosts": [
+    {
+      "name": "/"
+    }
+  ],
+  "users": [
+    {
+      "name": "guest",
+      "password_hash": "9/1i+jKFRpbTRV1PtRnzFFYibT3cEpP92JeZ8YKGtflf4e/u",
+      "tags": ["administrator"]
+    }
+  ],
+  "permissions": [
+    {
+      "user": "guest",
+      "vhost": "/",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "orders-direct",
+      "vhost": "/",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false
+    },
+    {
+      "name": "orders-fanout",
+      "vhost": "/",
+      "type": "fanout",
+      "durable": true,
+      "auto_delete": false
+    },
+    {
+      "name": "orders-topic",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false
+    },
+    {
+      "name": "orders-dlx",
+      "vhost": "/",
+      "type": "fanout",
+      "durable": true,
+      "auto_delete": false
+    }
+  ],
+  "queues": [
+    {
+      "name": "orders",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "orders-dlx",
+        "x-dead-letter-routing-key": "orders.dead-letter",
+        "x-max-priority": 10
+      }
+    },
+    {
+      "name": "orders-dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "orders-direct-q",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "orders-fanout-q1",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "orders-fanout-q2",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "orders-topic-urgent",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "orders-topic-regular",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
+  ],
+  "bindings": [
+    {
+      "source": "orders-direct",
+      "vhost": "/",
+      "destination": "orders",
+      "destination_type": "queue",
+      "routing_key": "order.new",
+      "arguments": {}
+    },
+    {
+      "source": "orders-fanout",
+      "vhost": "/",
+      "destination": "orders-fanout-q1",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    },
+    {
+      "source": "orders-fanout",
+      "vhost": "/",
+      "destination": "orders-fanout-q2",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    },
+    {
+      "source": "orders-topic",
+      "vhost": "/",
+      "destination": "orders-topic-urgent",
+      "destination_type": "queue",
+      "routing_key": "order.*.urgent",
+      "arguments": {}
+    },
+    {
+      "source": "orders-topic",
+      "vhost": "/",
+      "destination": "orders-topic-regular",
+      "destination_type": "queue",
+      "routing_key": "order.*.regular",
+      "arguments": {}
+    },
+    {
+      "source": "orders-dlx",
+      "vhost": "/",
+      "destination": "orders-dlq",
+      "destination_type": "queue",
+      "routing_key": "orders.dead-letter",
+      "arguments": {}
+    }
+  ]
+}

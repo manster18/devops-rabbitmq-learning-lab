@@ -1,0 +1,170 @@
+{
+  "id": null,
+  "uid": "rabbitmq-learning-lab",
+  "title": "RabbitMQ Monitoring",
+  "tags": ["rabbitmq", "messaging"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Messages in Queue (orders)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rabbitmq_queue_messages_ready{queue=\"orders\"}",
+          "legendFormat": "Ready"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rabbitmq_queue_messages_unacked{queue=\"orders\"}",
+          "legendFormat": "Unacked"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rabbitmq_queue_messages{queue=\"orders\"}",
+          "legendFormat": "Total"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Publish Rate — orders (per second)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rate(rabbitmq_queue_messages_published_total{queue=\"orders\"}[1m])",
+          "legendFormat": "Publish rate"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Consumers",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rabbitmq_queue_consumers{queue=\"orders\"}",
+          "legendFormat": "Consumers"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Connections",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rabbitmq_connections",
+          "legendFormat": "Total"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Memory Usage",
+      "type": "gauge",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 12 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rabbitmq_process_resident_memory_bytes / 1024 / 1024",
+          "legendFormat": "Memory (MB)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decmbytes",
+          "thresholds": {
+            "steps": [
+              { "value": 0, "color": "green" },
+              { "value": 256, "color": "yellow" },
+              { "value": 512, "color": "red" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Disk Space Available",
+      "type": "gauge",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 12 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rabbitmq_disk_space_available_bytes / 1024 / 1024 / 1024",
+          "legendFormat": "Free (GB)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decgbytes",
+          "thresholds": {
+            "steps": [
+              { "value": 0, "color": "red" },
+              { "value": 1, "color": "yellow" },
+              { "value": 5, "color": "green" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "DLQ Messages",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 12 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rabbitmq_queue_messages{queue=\"orders-dlq\"}",
+          "legendFormat": "DLQ messages"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Channel Operations (cluster-wide)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 20 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rate(rabbitmq_channel_messages_published_total[1m])",
+          "legendFormat": "Messages published"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rate(rabbitmq_channel_messages_delivered_total[1m])",
+          "legendFormat": "Messages delivered"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rate(rabbitmq_channel_messages_acked_total[1m])",
+          "legendFormat": "Messages acked"
+        }
+      ]
+    }
+  ]
+}

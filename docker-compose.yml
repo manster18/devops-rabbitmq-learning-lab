@@ -1,0 +1,148 @@
+services:
+  # ═══════════════════════════════════════════
+  # RabbitMQ broker
+  # ═══════════════════════════════════════════
+  rabbitmq:
+    image: rabbitmq:${RABBITMQ_IMAGE_TAG:-4.1-management}
+    container_name: rabbitmq
+    hostname: rabbitmq
+    ports:
+      - "${RABBITMQ_AMQP_PORT:-5672}:5672"           # AMQP
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"   # Management UI
+      - "${RABBITMQ_METRICS_PORT:-15692}:15692"      # Prometheus metrics
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./definitions.json:/etc/rabbitmq/definitions.json:ro
+    networks:
+      - rabbitmq-net
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════
+  # Prometheus
+  # ═══════════════════════════════════════════
+  prometheus:
+    image: prom/prometheus:${PROMETHEUS_IMAGE_TAG:-v2.54.1}
+    container_name: prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - rabbitmq-net
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════
+  # Node Exporter — host system metrics
+  # ═══════════════════════════════════════════
+  node-exporter:
+    image: prom/node-exporter:${NODE_EXPORTER_IMAGE_TAG:-v1.12.1}
+    container_name: node-exporter
+    ports:
+      - "${NODE_EXPORTER_PORT:-9100}:9100"
+    networks:
+      - rabbitmq-net
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════
+  # Grafana
+  # ═══════════════════════════════════════════
+  grafana:
+    image: grafana/grafana:${GRAFANA_IMAGE_TAG:-11.1.0}
+    container_name: grafana
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASS:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/grafana.ini:/etc/grafana/grafana.ini:ro
+      - grafana_data:/var/lib/grafana
+    networks:
+      - rabbitmq-net
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════
+  # Producer — Python microservice
+  # ═══════════════════════════════════════════
+  producer:
+    build:
+      context: ./producer
+      dockerfile: Dockerfile
+    container_name: producer
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_PASS: ${RABBITMQ_PASS:-guest}
+    networks:
+      - rabbitmq-net
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    profiles:
+      - tools   # Not started automatically by `docker compose up`
+
+  # ═══════════════════════════════════════════
+  # Consumer — Python microservice
+  # ═══════════════════════════════════════════
+  consumer:
+    build:
+      context: ./consumer
+      dockerfile: Dockerfile
+    container_name: consumer
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_PASS: ${RABBITMQ_PASS:-guest}
+      PREFETCH_COUNT: ${PREFETCH_COUNT:-5}
+      MAX_RETRIES: ${MAX_RETRIES:-3}
+      FAILURE_RATE: ${FAILURE_RATE:-0.15}
+      PROCESSING_MIN_DELAY: ${PROCESSING_MIN_DELAY:-0.5}
+      PROCESSING_MAX_DELAY: ${PROCESSING_MAX_DELAY:-2.0}
+    networks:
+      - rabbitmq-net
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    profiles:
+      - tools
+
+volumes:
+  rabbitmq_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  rabbitmq-net:
+    driver: bridge
+    name: rabbitmq-network

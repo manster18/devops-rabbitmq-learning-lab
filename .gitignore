@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Docker / RabbitMQ / Prometheus / Grafana runtime data
+tls/*.key
+tls/*.pem
+tls/*.csr
+tls/*.srl
+
+# OS / editor
+.DS_Store
+*.swp
+
+# Environment variables (copy .env.example -> .env locally; never commit .env)
+.env
+.env.local
