@@ -25,6 +25,8 @@
 
 ---
 
+
+
 ## Описание
 
 **RabbitMQ Learning Lab** — это полный практический курс для DevOps-инженеров, желающих освоить RabbitMQ на уровне, достаточном для работы в продакшене. Лабораторная работа включает:
@@ -36,11 +38,13 @@
 - 5 кейсов по отладке реальных проблем
 - 3 бонусных кейса для продвинутого уровня
 - Автоматическую проверку выполнения кейсов (`lab-solutions/case-*/verify.sh`)
-- Теоретические материалы в [`docs/`](docs/)
+- Теоретические материалы в `[docs/](docs/)`
 
 **Целевая аудитория:** DevOps-инженеры с базовым пониманием Docker и TCP/IP.
 
 ---
+
+
 
 ## Структура репозитория
 
@@ -100,17 +104,23 @@ devops-rabbitmq-learning-lab/
 
 ---
 
+
+
 ## Технологический стек
 
-| Компонент | Версия | Назначение |
-|-----------|--------|------------|
-| **RabbitMQ** | 4.1 (management) | Брокер сообщений |
-| **Docker Compose** | v2 | Оркестрация контейнеров |
-| **Python** | 3.12 | Язык микросервисов |
-| **pika** | 1.3.2 | Python-клиент RabbitMQ |
-| **Prometheus** | v2.54.1 | Сбор метрик |
-| **Grafana** | 11.1.0 | Визуализация метрик |
-| **Node Exporter** | v1.12.1 | Метрики системы |
+
+| Компонент          | Версия           | Назначение              |
+| ------------------ | ---------------- | ----------------------- |
+| **RabbitMQ**       | 4.1 (management) | Брокер сообщений        |
+| **Docker Compose** | v2               | Оркестрация контейнеров |
+| **Python**         | 3.12             | Язык микросервисов      |
+| **pika**           | 1.3.2            | Python-клиент RabbitMQ  |
+| **Prometheus**     | v2.54.1          | Сбор метрик             |
+| **Grafana**        | 11.1.0           | Визуализация метрик     |
+| **Node Exporter**  | v1.12.1          | Метрики системы         |
+
+
+
 
 ### Дополнительные зависимости (Python)
 
@@ -120,7 +130,11 @@ devops-rabbitmq-learning-lab/
 
 ---
 
+
+
 ## Быстрый старт
+
+
 
 ### 1. Репозиторий
 
@@ -137,7 +151,7 @@ cd devops-rabbitmq-learning-lab
 cp .env.example .env
 ```
 
-Значения по умолчанию в [`.env.example`](.env.example) (учётные данные, версии образов, порты) уже готовы для локального обучения — менять их не обязательно. Если вы пропустите этот шаг и запустите `./scripts/setup.sh`, он создаст `.env` за вас автоматически.
+Значения по умолчанию в `[.env.example](.env.example)` (учётные данные, версии образов, порты) уже готовы для локального обучения — менять их не обязательно. Если вы пропустите этот шаг и запустите `./scripts/setup.sh`, он создаст `.env` за вас автоматически.
 
 ### 2. Запустите все сервисы
 
@@ -149,6 +163,8 @@ docker compose up -d --build
 
 > `producer` и `consumer` находятся в Compose profile `tools` и **не запускаются** автоматически — они предназначены для одноразовых запусков через `docker compose run`.
 
+
+
 ### 3. Проверьте здоровье сервисов
 
 ```bash
@@ -159,11 +175,15 @@ docker compose ps
 
 ### 4. Откройте веб-интерфейсы
 
-| Сервис | URL | Логин / Пароль |
-|--------|-----|-----------------|
-| RabbitMQ Management | http://localhost:15672 | `guest` / `guest` |
-| Grafana | http://localhost:3000 | `admin` / `admin` |
-| Prometheus | http://localhost:9090 | — |
+
+| Сервис              | URL                                              | Логин / Пароль    |
+| ------------------- | ------------------------------------------------ | ----------------- |
+| RabbitMQ Management | [http://localhost:15672](http://localhost:15672) | `guest` / `guest` |
+| Grafana             | [http://localhost:3000](http://localhost:3000)   | `admin` / `admin` |
+| Prometheus          | [http://localhost:9090](http://localhost:9090)   | —                 |
+
+
+
 
 ### 5. Запустите первого producer
 
@@ -171,26 +191,32 @@ docker compose ps
 docker compose run --rm producer python producer.py --count 10
 ```
 
+
+
 ### 6. Запустите consumer в отдельном терминале
 
 ```bash
 docker compose run --rm consumer python consumer.py
 ```
 
+
+
 ### 7. Очистка между кейсами
 
 ```bash
-./scripts/cleanup.sh          # покурить очереди orders/orders-dlq, стенд не останавливается
+./scripts/cleanup.sh          # purge всех lab-очередей, стенд не останавливается
 ./scripts/cleanup.sh --full   # docker compose down -v — полный сброс
 ```
 
 ---
 
+
+
 ## docker-compose.yml
 
-Полный файл лежит в [`docker-compose.yml`](docker-compose.yml). Ключевые моменты:
+Полный файл лежит в `[docker-compose.yml](docker-compose.yml)`. Ключевые моменты:
 
-- Все креды/версии/порты берутся из `.env` (создаётся из [`.env.example`](.env.example)) через `${VAR:-default}` — не хардкодятся.
+- Все креды/версии/порты берутся из `.env` (создаётся из `[.env.example](.env.example)`) через `${VAR:-default}` — не хардкодятся.
 - `node-exporter` — добавлен, так как `monitoring/prometheus.yml` скрейпит `node-exporter:9100`, а без самого сервиса эта job всегда была бы `DOWN`.
 - `rabbitmq.conf` и `definitions.json` монтируются в контейнер `rabbitmq` как read-only volumes.
 - `producer`/`consumer` — Compose profile `tools`, запускаются только через `docker compose run --rm <service> ...`.
@@ -256,11 +282,11 @@ services:
         condition: service_healthy
 ```
 
-Полная версия со всеми портами, healthcheck-ами и volumes — см. файл [`docker-compose.yml`](docker-compose.yml) в корне репозитория.
+Полная версия со всеми портами, healthcheck-ами и volumes — см. файл `[docker-compose.yml](docker-compose.yml)` в корне репозитория.
 
 ### Файл `rabbitmq.conf`
 
-См. [`rabbitmq.conf`](rabbitmq.conf). Основные параметры:
+См. `[rabbitmq.conf](rabbitmq.conf)`. Основные параметры:
 
 ```ini
 prometheus.return_per_object_metrics = true
@@ -275,21 +301,25 @@ queue_master_locator = min-masters
 management.load_definitions = /etc/rabbitmq/definitions.json
 ```
 
-> ⚠️ В [Кейсе 7](#кейс-7-memorydisk-alarms--блокировка-producer) вы временно замените `vm_memory_high_watermark.relative` на `vm_memory_high_watermark.absolute`. Эти два параметра **взаимоисключающие** — если оставить оба в файле одновременно, RabbitMQ не запустится с ошибкой конфигурации. Всегда **заменяйте**, а не дополняйте.
+> ⚠️ В [Кейсе 7](#кейс-7-memorydisk-alarms--блокировка-producer) watermark временно понижается через `rabbitmqctl set_vm_memory_high_watermark` (без правки файла). Если всё же правите `rabbitmq.conf`, помните: `vm_memory_high_watermark.relative` и `.absolute` **взаимоисключающие** — оставляйте только один, иначе брокер не стартует.
+
+
 
 ### Файл `definitions.json`
 
-Полностью — см. [`definitions.json`](definitions.json). Объявляет:
+Полностью — см. `[definitions.json](definitions.json)`. Объявляет:
 
 - 4 exchange: `orders-direct`, `orders-fanout`, `orders-topic`, `orders-dlx`
 - 7 очередей, включая `orders` (с `x-max-priority`, `x-dead-letter-exchange`) и `orders-dlq`
-- Bindings, реализующие маршрутизацию по типу заказа (см. [`docs/concepts.md`](docs/concepts.md))
+- Bindings, реализующие маршрутизацию по типу заказа (см. `[docs/concepts.md](docs/concepts.md)`)
 
-Подробный разбор модели exchanges/queues/bindings — в [`docs/concepts.md`](docs/concepts.md).
+Подробный разбор модели exchanges/queues/bindings — в `[docs/concepts.md](docs/concepts.md)`.
 
 > ⚠️ Пользователь `guest`/`guest` в `definitions.json` задан через `password_hash`, а не открытым паролем — так требует формат definitions-файла. Если вы поменяете `RABBITMQ_USER`/`RABBITMQ_PASS` в своём `.env`, пересоздайте хэш: `docker compose exec rabbitmq rabbitmqctl hash_password '<новый-пароль>'` и подставьте результат в `definitions.json` (плюс переименуйте `name`/обновите `permissions.user`).
 
 ---
+
+
 
 ## Микросервис 1: Producer
 
@@ -303,41 +333,49 @@ management.load_definitions = /etc/rabbitmq/definitions.json
 docker compose run --rm producer python producer.py --count 20 --type mixed --delay 0.2
 ```
 
-| Флаг | Назначение |
-|------|-----------|
-| `--count` | Количество сообщений |
-| `--delay` | Задержка между сообщениями, сек |
-| `--type` | `standard` / `express` / `bulk` / `mixed` |
-| `--no-confirms` | Отключить publisher confirms |
 
-Полный код — [`producer/producer.py`](producer/producer.py).
+| Флаг            | Назначение                                |
+| --------------- | ----------------------------------------- |
+| `--count`       | Количество сообщений                      |
+| `--delay`       | Задержка между сообщениями, сек           |
+| `--type`        | `standard` / `express` / `bulk` / `mixed` |
+| `--no-confirms` | Отключить publisher confirms              |
+
+
+Полный код — `[producer/producer.py](producer/producer.py)`.
 
 ---
+
+
 
 ## Микросервис 2: Consumer
 
 `consumer/consumer.py` потребляет `orders` с ручным ack, симулирует случайные сбои обработки (`FAILURE_RATE`) и retry-логику (`MAX_RETRIES`). После превышения лимита попыток сообщение публикуется в `orders-dlx` (см. `send_to_dlq()`).
 
-DLQ-обработчик вынесен в отдельный модуль [`consumer/dlq_handler.py`](consumer/dlq_handler.py) — он запускается в фоновом потоке, слушает `orders-dlq` и логирует причину и время попадания в DLQ.
+DLQ-обработчик вынесен в отдельный модуль `[consumer/dlq_handler.py](consumer/dlq_handler.py)` — он запускается в фоновом потоке, слушает `orders-dlq` и логирует причину и время попадания в DLQ.
 
-| ENV | По умолчанию | Назначение |
-|-----|---------------|-----------|
-| `PREFETCH_COUNT` | `5` | Сколько сообщений consumer забирает заранее |
-| `MAX_RETRIES` | `3` | Число попыток перед отправкой в DLQ |
-| `FAILURE_RATE` | `0.15` | Вероятность симулированного сбоя |
-| `PROCESSING_MIN_DELAY` / `PROCESSING_MAX_DELAY` | `0.5` / `2.0` | Диапазон задержки обработки, сек |
+
+| ENV                                             | По умолчанию  | Назначение                                  |
+| ----------------------------------------------- | ------------- | ------------------------------------------- |
+| `PREFETCH_COUNT`                                | `5`           | Сколько сообщений consumer забирает заранее |
+| `MAX_RETRIES`                                   | `3`           | Число попыток перед отправкой в DLQ         |
+| `FAILURE_RATE`                                  | `0.15`        | Вероятность симулированного сбоя            |
+| `PROCESSING_MIN_DELAY` / `PROCESSING_MAX_DELAY` | `0.5` / `2.0` | Диапазон задержки обработки, сек            |
+
 
 ```bash
 docker compose run --rm -e PREFETCH_COUNT=1 -e FAILURE_RATE=0.5 consumer python consumer.py
 ```
 
-Полный код — [`consumer/consumer.py`](consumer/consumer.py) и [`consumer/dlq_handler.py`](consumer/dlq_handler.py).
+Полный код — `[consumer/consumer.py](consumer/consumer.py)` и `[consumer/dlq_handler.py](consumer/dlq_handler.py)`.
 
 ---
 
+
+
 ## Настройка мониторинга
 
-Полная теория, разбор метрик по уровням (queue/channel/node) и готовые PromQL-запросы — в [`docs/monitoring.md`](docs/monitoring.md). Здесь — краткая шпаргалка.
+Полная теория, разбор метрик по уровням (queue/channel/node) и готовые PromQL-запросы — в `[docs/monitoring.md](docs/monitoring.md)`. Здесь — краткая шпаргалка.
 
 ### prometheus.yml
 
@@ -362,6 +400,8 @@ scrape_configs:
       - targets: ["node-exporter:9100"]
 ```
 
+
+
 ### Grafana: datasource и dashboard provisioning
 
 `monitoring/grafana/provisioning/datasources/prometheus.yml` подключает Prometheus как datasource по умолчанию (с фиксированным `uid: prometheus`, чтобы дашборд мог сослаться на него надёжно).
@@ -376,41 +416,51 @@ scrape_configs:
 2. **Dashboards → Browse → RabbitMQ → RabbitMQ Monitoring**.
 3. Дашборд обновляется каждые 10 секунд и сразу показывает данные — Prometheus datasource подключён автоматически.
 
+
+
 ### Алертинг
 
-Правила лежат в [`monitoring/alerts.yml`](monitoring/alerts.yml): рост очереди, отсутствие consumer-ов, нехватка диска, высокая память. Посмотреть активные алерты — `http://localhost:9090/alerts`. Подробности — [`docs/monitoring.md`](docs/monitoring.md#4-алертинг).
+Правила лежат в `[monitoring/alerts.yml](monitoring/alerts.yml)`: рост очереди, отсутствие consumer-ов, нехватка диска, высокая память. Посмотреть активные алерты — `http://localhost:9090/alerts`. Подробности — `[docs/monitoring.md](docs/monitoring.md#4-алертинг)`.
 
 ---
+
+
 
 ## Лабораторные кейсы
 
 > Каждый кейс можно автоматически проверить: `./lab-solutions/case-N/verify.sh` (после выполнения шагов руками). Скрипты используют Management HTTP API и не заменяют ручное наблюдение в UI — только дополняют его.
 
+
+
 ### Кейс 1: Отправка и потребление сообщений (базовый поток)
 
 **Цель:** Запустить producer и consumer, убедиться что сообщения доставляются.
 
+> ⚠️ Consumer слушает только очередь `orders`. В неё попадают **только** заказы `--type standard` (через exchange `orders-direct`). По умолчанию producer шлёт `mixed` (`standard` / `express` / `bulk`) — тогда сообщения уйдут в `orders-topic-`* и `orders-fanout-*`, а `orders` останется пустой. Поэтому в этом кейсе явно указываем `--type standard`.
+
 **Шаги:**
 
 1. Запустите RabbitMQ и убедитесь что он healthy:
+
 ```bash
 docker compose up -d rabbitmq
 docker compose ps
 ```
 
-2. Отправьте 5 сообщений:
+1. Отправьте 5 сообщений **типа standard** (чтобы все попали в `orders`):
+
 ```bash
-docker compose run --rm producer python producer.py --count 5 --delay 0.2
+docker compose run --rm producer python producer.py --count 5 --type standard --delay 0.2
 ```
 
-3. Проверьте в Management UI (`http://localhost:15672`) — вкладка **Queues** → очередь `orders` должна показать 5 сообщений (Ready).
+1. Проверьте в Management UI (`http://localhost:15672`) — вкладка **Queues** → очередь `orders` должна показать 5 сообщений (Ready).
+2. Запустите consumer:
 
-4. Запустите consumer:
 ```bash
 docker compose run --rm consumer python consumer.py
 ```
 
-5. Наблюдайте в Management UI как сообщения уменьшаются: Ready: 0, Unacknowledged: 0.
+1. Наблюдайте в Management UI как сообщения уменьшаются: Ready: 0, Unacknowledged: 0.
 
 **Ожидаемый результат:** Все 5 сообщений обработаны, очередь пуста.
 
@@ -418,33 +468,37 @@ docker compose run --rm consumer python consumer.py
 
 ---
 
+
+
 ### Кейс 2: Влияние prefetch_count
 
 **Цель:** Понять как `prefetch_count` влияет на распределение нагрузки.
 
 **Шаги:**
 
-1. Отправьте 20 сообщений:
+1. Отправьте 20 сообщений в очередь `orders`:
+
 ```bash
-docker compose run --rm producer python producer.py --count 20 --delay 0.1
+docker compose run --rm producer python producer.py --count 20 --type standard --delay 0.1
 ```
 
-2. Запустите consumer с `prefetch_count=1`:
+1. Запустите consumer с `prefetch_count=1`:
+
 ```bash
 docker compose run --rm -e PREFETCH_COUNT=1 consumer python consumer.py
 ```
 
-3. Заметьте скорость обработки. Остановите consumer (Ctrl+C).
+1. Заметьте скорость обработки. Остановите consumer (Ctrl+C).
+2. Повторите с `prefetch_count=10`:
 
-4. Повторите с `prefetch_count=10`:
 ```bash
-docker compose run --rm producer python producer.py --count 20 --delay 0.1
+docker compose run --rm producer python producer.py --count 20 --type standard --delay 0.1
 docker compose run --rm -e PREFETCH_COUNT=10 consumer python consumer.py
 ```
 
-5. Сравните:
-   - **prefetch_count=1**: consumer обрабатывает по одному сообщению. Медленно, но безопасно.
-   - **prefetch_count=10**: consumer берёт больше сообщений сразу. Быстрее, но выше нагрузка/риск при сбое.
+1. Сравните:
+  - **prefetch_count=1**: consumer обрабатывает по одному сообщению. Медленно, но безопасно.
+  - **prefetch_count=10**: consumer берёт больше сообщений сразу. Быстрее, но выше нагрузка/риск при сбое.
 
 **В Management UI:** вкладка **Channels** → `Unacked` — количество сообщений, взятых consumer-ом, но ещё не обработанных.
 
@@ -452,81 +506,107 @@ docker compose run --rm -e PREFETCH_COUNT=10 consumer python consumer.py
 
 ---
 
+
+
 ### Кейс 3: Dead Letter Queue — сбои и DLQ
 
 **Цель:** Наблюдать как сообщения попадают в DLQ после `MAX_RETRIES` неудачных попыток.
 
 **Шаги:**
 
-1. Отправьте 30 сообщений:
+1. Отправьте 30 сообщений в очередь `orders` (DLQ настроен именно на неё):
+
 ```bash
-docker compose run --rm producer python producer.py --count 30 --delay 0.1
+docker compose run --rm producer python producer.py --count 30 --type standard --delay 0.1
 ```
 
-2. Запустите consumer с высокой вероятностью сбоя:
+1. Запустите consumer с высокой вероятностью сбоя:
+
 ```bash
 docker compose run --rm -e FAILURE_RATE=0.5 -e MAX_RETRIES=3 consumer python consumer.py
 ```
 
-3. Наблюдайте в Management UI: очередь `orders` уменьшается, `orders-dlq` растёт; вкладка **Exchanges → orders-dlx** — маршрутизация DLQ.
+1. Наблюдайте в Management UI: очередь `orders` уменьшается; `orders-dlq` может кратко вырасти и снова стать пустой — встроенный DLQ-handler в consumer сразу забирает и логирует эти сообщения. Надёжный сигнал: логи `[WARNING] Message sent to DLQ` и `[WARNING] [consumer.dlq] DLQ: ...`.
+2. В логах consumer вы увидите:
 
-4. В логах consumer вы увидите:
 ```
 [ERROR] Failed to process order abc12345...: payment_timeout
 [WARNING] Message sent to DLQ: order_id=abc12345... (after 3 attempts)
+[WARNING] [consumer.dlq] DLQ: order_id=abc12345... reason=failed_after_3_retries
 ```
 
-**Ожидаемый результат:** Часть сообщений обработана успешно, часть попала в DLQ.
+**Ожидаемый результат:** Часть сообщений обработана успешно, часть попала в DLQ (и была обработана DLQ-handler-ом).
 
-**Автопроверка:** `./lab-solutions/case-3/verify.sh`
+**Автопроверка:** `./lab-solutions/case-3/verify.sh` (смотрит `message_stats.publish`/`ack`, а не текущую глубину — очередь к моменту проверки уже пуста)
 
 ---
+
+
 
 ### Кейс 4: Topic Exchange — маршрутизация по паттернам
 
 **Цель:** Научиться маршрутизировать сообщения через topic exchange.
 
+> ⚠️ В `orders-topic` попадают **только** заказы `--type express`. У `express` приоритет по умолчанию = 8 (≥ 7), поэтому без `--priority` **все** они уходят в `orders-topic-urgent`, а `orders-topic-regular` остаётся пустой. Чтобы увидеть обе очереди, форсируем приоритет явно.
+
 **Шаги:**
 
-1. Отправьте 20 сообщений всех типов:
+1. Очистите хвосты прошлых прогонов (по желанию):
+
+```bash
+./scripts/cleanup.sh
+```
+
+1. Отправьте urgent-сообщения (`priority >= 7` → routing key `order.express.urgent`):
+
+```bash
+docker compose run --rm producer python producer.py --count 5 --type express --priority 9 --delay 0.1
+```
+
+1. Отправьте regular-сообщения (`priority < 7` → routing key `order.express.regular`):
+
+```bash
+docker compose run --rm producer python producer.py --count 5 --type express --priority 3 --delay 0.1
+```
+
+1. В Management UI, вкладка **Queues**:
+  - `orders-topic-urgent`: Ready ≈ 5 (binding `order.*.urgent`)
+  - `orders-topic-regular`: Ready ≈ 5 (binding `order.*.regular`)
+2. (Опционально) Смешанный прогон — видно, что `standard`/`bulk` в topic **не** попадают:
+
 ```bash
 docker compose run --rm producer python producer.py --count 20 --type mixed --delay 0.2
 ```
 
-2. В Management UI, вкладка **Queues**:
-   - `orders-topic-urgent`: сообщения с паттерном `order.*.urgent` (express-заказы с priority ≥ 7)
-   - `orders-topic-regular`: сообщения с паттерном `order.*.regular`
+В UI вырастут `orders` / `orders-fanout-*`, а не только topic-очереди.
 
-3. Отправьте только express:
-```bash
-docker compose run --rm producer python producer.py --count 10 --type express --delay 0.2
-```
-
-**Ожидаемый результат:** Все express-заказы попадают в `orders-topic-urgent`, остальные — в `orders-topic-regular`.
+**Ожидаемый результат:** Express с высоким приоритетом → `orders-topic-urgent`, с низким → `orders-topic-regular`. Consumer для этого кейса не нужен (он слушает только `orders`).
 
 **Автопроверка:** `./lab-solutions/case-4/verify.sh`
 
 ---
 
+
+
 ### Кейс 5: Priority Queues — приоритетная обработка
 
 **Цель:** Сравнить обработку сообщений с разными приоритетами внутри одной очереди.
 
-> ⚠️ В очередь `orders` попадают **только** заказы типа `standard` (см. [`docs/concepts.md`](docs/concepts.md) — `express` уходит в `orders-topic`, `bulk` — в `orders-fanout`). А приоритет `standard`-заказов всегда одинаковый (5), если не задать `--priority` явно. Поэтому для этого кейса используется флаг `--priority`, форсирующий конкретный приоритет независимо от типа заказа.
+> ⚠️ В очередь `orders` попадают **только** заказы типа `standard` (см. `[docs/concepts.md](docs/concepts.md)` — `express` уходит в `orders-topic`, `bulk` — в `orders-fanout`). А приоритет `standard`-заказов всегда одинаковый (5), если не задать `--priority` явно. Поэтому для этого кейса используется флаг `--priority`, форсирующий конкретный приоритет независимо от типа заказа.
 
 **Шаги:**
 
 1. Остановите/не запускайте consumer заранее — сначала нужно накопить сообщения с разными приоритетами в одной очереди.
-
 2. Отправьте сообщения с низким и высоким приоритетом (оба — `--type standard`, чтобы оба оказались в `orders`):
+
 ```bash
 docker compose run --rm producer python producer.py --count 5 --type standard --priority 3 --delay 0.1
 docker compose run --rm producer python producer.py --count 5 --type standard --priority 9 --delay 0.1
 ```
 
-3. В Management UI → **Queues → orders → Get messages** (Ack mode: `Nack requeue`, Messages: 10) — посмотрите порядок: сообщения с приоритетом 9 должны идти раньше сообщений с приоритетом 3, независимо от порядка публикации.
+1. В Management UI → **Queues → orders → Get messages** (Ack mode: `Nack requeue`, Messages: 10) — посмотрите порядок: сообщения с приоритетом 9 должны идти раньше сообщений с приоритетом 3, независимо от порядка публикации.
+2. Запустите consumer и убедитесь, что он тоже забирает высокоприоритетные сообщения первыми:
 
-4. Запустите consumer и убедитесь, что он тоже забирает высокоприоритетные сообщения первыми:
 ```bash
 docker compose run --rm consumer python consumer.py
 ```
@@ -537,27 +617,30 @@ docker compose run --rm consumer python consumer.py
 
 ---
 
+
+
 ### Кейс 6: Масштабирование consumers — балансировка нагрузки
 
 **Цель:** Наблюдать round-robin балансировку при нескольких consumer-ах.
 
 **Шаги:**
 
-1. Отправьте 30 сообщений:
+1. Отправьте 30 сообщений в очередь `orders`:
+
 ```bash
-docker compose run --rm producer python producer.py --count 30 --delay 0.1
+docker compose run --rm producer python producer.py --count 30 --type standard --delay 0.1
 ```
 
-2. Запустите 3 consumer-а в разных терминалах:
+1. Запустите 3 consumer-а в разных терминалах:
+
 ```bash
 docker compose run --rm --name consumer-1 consumer python consumer.py
 docker compose run --rm --name consumer-2 consumer python consumer.py
 docker compose run --rm --name consumer-3 consumer python consumer.py
 ```
 
-3. В Management UI → **Queues → orders → Consumers**: 3 потребителя, сообщения распределяются между ними.
-
-4. Остановите один consumer — оставшиеся 2 забирают нагрузку.
+1. В Management UI → **Queues → orders → Consumers**: 3 потребителя, сообщения распределяются между ними.
+2. Остановите один consumer — оставшиеся 2 забирают нагрузку.
 
 **Ожидаемый результат:** При 3 consumer-ах обработка в ~3 раза быстрее; при остановке одного — автоматическая ребалансировка.
 
@@ -565,60 +648,95 @@ docker compose run --rm --name consumer-3 consumer python consumer.py
 
 ---
 
+
+
 ### Кейс 7: Memory/Disk Alarms — блокировка producer
 
-**Цель:** Наблюдать как RabbitMQ блокирует producer при нехватке ресурсов.
+**Цель:** Наблюдать как RabbitMQ блокирует producer при memory alarm.
+
+> ⚠️ Почему «налить 200k persistent-сообщений» обычно **не** поднимает RSS: `load-test` по умолчанию шлёт `delivery_mode=2` (persistent), а при `vm_memory_high_watermark_paging_ratio = 0.5` брокер сразу уводит сообщения на диск. В итоге в очереди могут лежать сотни мегабайт (`message_bytes`), а `messages_ram` ≈ 1 и **Memory Alarm не загорается**. Для демо надёжнее **опустить watermark ниже текущего RSS** — эффект тот же (`connection.blocked`), что и при реальном OOM-давлении.
 
 **Шаги:**
 
-1. В `rabbitmq.conf` **замените** (не добавьте!) строку `vm_memory_high_watermark.relative = 0.4` на:
-```ini
-vm_memory_high_watermark.absolute = 200MB
-```
+1. Убедитесь, что consumer-ы остановлены (иначе очередь не растёт и картина смазывается):
 
-2. Перезапустите RabbitMQ:
 ```bash
-docker compose restart rabbitmq
+docker ps -q --filter name=consumer-run | xargs -r docker stop
+./scripts/cleanup.sh
 ```
 
-3. Сгенерируйте нагрузку (требует `pip install -r producer/requirements.txt` локально, либо запустите изнутри контейнера `producer`):
+2. Посмотрите текущее потребление памяти:
+
 ```bash
-python scripts/load-test.py --total 200000 --workers 10 --size 2048
+curl -s -u guest:guest http://localhost:15672/api/nodes | python3 -c "
+import json, sys
+n = json.load(sys.stdin)[0]
+print(f\"used={n['mem_used']/1e6:.0f}MB limit={n['mem_limit']/1e6:.0f}MB alarm={n['mem_alarm']}\")
+"
 ```
 
-4. В Management UI → **Overview** появляется предупреждение **Memory Alarm**; producer блокируется (`connection.blocked`).
+3. Опустите watermark ниже текущего RSS (alarm загорится сразу):
 
-5. Восстановите исходный параметр в `rabbitmq.conf`:
-```ini
-vm_memory_high_watermark.relative = 0.4
-```
 ```bash
-docker compose restart rabbitmq
+docker compose exec rabbitmq rabbitmqctl set_vm_memory_high_watermark absolute 100MB
 ```
 
-**Ожидаемый результат:** При превышении лимита памяти producer блокируется; после восстановления лимита — работает нормально.
+4. Подтвердите alarm (в RabbitMQ 4.x поле `mem_alarm` на `/api/nodes` может оставаться `false` — смотрите health-check или Prometheus):
 
-**Автопроверка:** `./lab-solutions/case-7/verify.sh`
+```bash
+curl -s -u guest:guest http://localhost:15672/api/health/checks/alarms
+# ожидаемо: HTTP 503 и {"alarms":[{"resource":"memory",...}], ...}
+
+curl -s http://localhost:15692/metrics | grep rabbitmq_alarms_memory_used_watermark
+# ожидаемо: rabbitmq_alarms_memory_used_watermark 1
+```
+
+В Management UI → **Overview** тоже может появиться баннер Memory alarm; если UI «молчит», ориентируйтесь на команды выше — alarm при этом уже действует и блокирует publisher'ов.
+
+5. Запустите нагрузку — publisher'ы упрутся в `connection.blocked` (подтверждения зависнут / упадут по timeout):
+
+```bash
+docker compose run --rm \
+  -v "$(pwd)/scripts:/app/scripts:ro" \
+  producer python scripts/load-test.py --total 5000 --workers 5 --size 2048
+```
+
+6. Снимите alarm и верните относительный лимит из `rabbitmq.conf`:
+
+```bash
+docker compose exec rabbitmq rabbitmqctl set_vm_memory_high_watermark 0.4
+```
+
+**Ожидаемый результат:** При активном memory alarm publish блокируется; после `set_vm_memory_high_watermark 0.4` — снова проходит.
+
+**Автопроверка:** `./lab-solutions/case-7/verify.sh` (запускайте **пока** watermark ещё понижен, шаг 3–5).
 
 ---
 
+
+
 ### Кейс 8: Симуляция кластера — 2 узла с quorum queues
 
-**Цель:** Настроить 2-узловой кластер и использовать quorum queues.
+**Цель:** Поднять 2-узловой кластер, объявить quorum queue и **на практике** увидеть leader/replicas и поведение при потере узла.
+
+> ⚠️ Учебный кластер из **2 узлов**. Для quorum majority = `N/2+1`, то есть **2 из 2**. Падение любого узла лишает очередь кворума — publish перестаёт проходить. В проде ставят **3+** узлов (переживают падение одного). Это как раз то, что демонстрирует кейс.
 
 **Шаги:**
 
 1. Остановите основной стенд, если он запущен (порты 5672/15672/15692 совпадают):
+
 ```bash
 docker compose down
 ```
 
 2. Запустите кластер:
+
 ```bash
 docker compose -f docker-compose.cluster.yml up -d
 ```
 
 3. Подключите второй узел к кластеру:
+
 ```bash
 docker exec -it rabbitmq-2 rabbitmqctl stop_app
 docker exec -it rabbitmq-2 rabbitmqctl reset
@@ -627,27 +745,92 @@ docker exec -it rabbitmq-2 rabbitmqctl start_app
 ```
 
 4. Проверьте кластер:
+
 ```bash
 docker exec -it rabbitmq-1 rabbitmqctl cluster_status
 ```
 
-5. Создайте quorum queue через `rabbitmqadmin` (входит в образ `*-management`):
+5. Создайте quorum queue через `rabbitmqadmin` (входит в образ `*-management`; в RabbitMQ 4.x CLI v2 — флаги `--name`/`--type`, а не старый стиль `name=...`):
+
 ```bash
-docker exec -it rabbitmq-1 rabbitmqadmin declare queue name=orders-quorum durable=true \
-  arguments='{"x-queue-type": "quorum"}'
+docker exec -it rabbitmq-1 rabbitmqadmin declare queue \
+  --name orders-quorum --type quorum --durable true
 ```
 
-6. Проверьте в Management UI: **Overview** → кластер из 2 узлов; **Queues → orders-quorum** с type `quorum`.
+6. Посмотрите leader и реплики:
 
-**Ожидаемый результат:** 2-узловой кластер работает, quorum queue реплицирует сообщения между узлами.
+```bash
+docker exec -it rabbitmq-1 rabbitmqctl list_queues name type leader members online
+```
 
-**Автопроверка:** `./lab-solutions/case-8/verify.sh`
+Ожидаемо: `type=quorum`, `members` и `online` содержат и `rabbit@rabbitmq-1`, и `rabbit@rabbitmq-2`.
+
+7. Опубликуйте несколько сообщений (default exchange → routing key = имя очереди):
+
+```bash
+for i in 1 2 3 4 5; do
+  docker exec rabbitmq-1 rabbitmqadmin publish message \
+    --routing-key orders-quorum \
+    --payload "{\"order_id\":\"quorum-$i\"}"
+done
+
+docker exec rabbitmq-1 rabbitmqctl list_queues name messages leader members online
+```
+
+В Management UI (`http://localhost:15672`) → **Queues → orders-quorum**: type `quorum`, Ready ≈ 5, видны node / members.
+
+8. Остановите follower и посмотрите, что quorum пропал:
+
+```bash
+# кто сейчас leader — останавливаем другой узел (если leader = rabbitmq-1, стопаем rabbitmq-2)
+docker stop rabbitmq-2
+
+docker exec rabbitmq-1 rabbitmqctl list_queues name messages members online state
+```
+
+`online` сузится до одного узла. Сообщения, уже зафиксированные majority, **остаются** в очереди.
+
+9. Попробуйте опубликовать ещё одно сообщение — без majority publish не проходит (команда упадёт / зависнет по таймауту):
+
+Linux:
+
+```bash
+timeout 15 docker exec rabbitmq-1 rabbitmqadmin publish message \
+  --routing-key orders-quorum \
+  --payload '{"order_id":"should-fail-without-quorum"}' || echo "publish failed as expected (no quorum)"
+```
+
+macOS (нет GNU `timeout`; используем `perl`):
+
+```bash
+perl -e 'alarm 15; exec @ARGV' docker exec rabbitmq-1 rabbitmqadmin publish message \
+  --routing-key orders-quorum \
+  --payload '{"order_id":"should-fail-without-quorum"}' || echo "publish failed as expected (no quorum)"
+```
+
+10. Верните узел и убедитесь, что кластер и очередь снова online:
+
+```bash
+docker start rabbitmq-2
+# подождите healthy (10–20 с)
+docker exec rabbitmq-1 rabbitmqctl list_queues name messages members online
+```
+
+Сообщения на месте, оба member снова в `online`. Повторите publish — снова успех.
+
+**Ожидаемый результат:** Quorum queue реплицируется на оба узла; при одном живом узле из двух publish блокируется (нет majority); после возврата узла очередь снова принимает сообщения. Вывод для прода: **нечётное число узлов ≥ 3**.
+
+**Автопроверка:** `./lab-solutions/case-8/verify.sh` (оба узла должны быть up)
 
 Теория по Raft-консенсусу, partition handling и командам `rabbitmqctl` — [`docs/clustering.md`](docs/clustering.md).
 
 ---
 
+
+
 ## Кейсы для отладки
+
+
 
 ### Кейс 1: «Producer blocked» — disk/memory alarm
 
@@ -674,6 +857,8 @@ docker compose restart rabbitmq
 
 ---
 
+
+
 ### Кейс 2: «Messages stuck in queue» — consumer не ack-ит
 
 **Симптом:** Очередь `orders` содержит сообщения, consumer запущен, но сообщения не уменьшаются.
@@ -698,6 +883,8 @@ print(f'Ready: {data[\"messages_ready\"]}')
 - Проверьте, что consumer вообще запущен: `docker compose ps | grep consumer`.
 
 ---
+
+
 
 ### Кейс 3: «Queue grows indefinitely» — нет TTL, нет DLX
 
@@ -732,6 +919,8 @@ curl -u guest:guest -X PUT http://localhost:15672/api/policies/%2F/ttl-and-dlx \
 
 ---
 
+
+
 ### Кейс 4: «Cluster partition» — network split
 
 **Симптом:** В Management UI видно "Partitioned"-состояние, узлы не видят друг друга.
@@ -748,9 +937,11 @@ docker exec -it rabbitmq-1 rabbitmqctl cluster_status | grep -A 5 "partitions"
 - `cluster_partition_handling = pause_minority` — для 3+ узлов.
 - Ручное восстановление: `stop_app` → `reset` → `join_cluster` → `start_app` на «отвалившемся» узле.
 
-Подробности — [`docs/clustering.md`](docs/clustering.md#5-partition-handling--что-происходит-при-split-пары-узлов).
+Подробности — `[docs/clustering.md](docs/clustering.md#5-partition-handling--что-происходит-при-split-пары-узлов)`.
 
 ---
+
+
 
 ### Кейс 5: «Leader переключился неожиданно» — quorum queue rebalancing
 
@@ -774,7 +965,11 @@ print(f'Leader: {data.get(\"leader\", \"N/A\")}, Online: {data.get(\"online\", [
 
 ---
 
+
+
 ## Бонусные кейсы
+
+
 
 ### Бонус 1: TLS для RabbitMQ соединений
 
@@ -783,12 +978,15 @@ print(f'Leader: {data.get(\"leader\", \"N/A\")}, Online: {data.get(\"online\", [
 **Шаги:**
 
 1. Сгенерируйте сертификаты одной командой (обёртка над `openssl`):
+
 ```bash
 ./scripts/generate-tls-certs.sh
 ```
+
 Файлы появятся в `tls/` (директория в `.gitignore`, секреты никогда не коммитятся).
 
-2. Добавьте в `rabbitmq.conf`:
+1. Добавьте в `rabbitmq.conf`:
+
 ```ini
 listeners.ssl.default = 5671
 ssl_options.cacertfile = /etc/rabbitmq/ssl/ca.pem
@@ -797,9 +995,11 @@ ssl_options.keyfile = /etc/rabbitmq/ssl/server.key
 ssl_options.verify = verify_peer
 ssl_options.fail_if_no_peer_cert = true
 ```
+
 и смонтируйте `./tls` как `/etc/rabbitmq/ssl` в `docker-compose.yml`.
 
-3. Подключитесь с TLS:
+1. Подключитесь с TLS:
+
 ```python
 import ssl
 import pika
@@ -816,6 +1016,8 @@ params = pika.ConnectionParameters(
 ```
 
 ---
+
+
 
 ### Бонус 2: Shovel plugin для кросс-кластерной репликации
 
@@ -841,6 +1043,8 @@ curl -u guest:guest -X PUT \
 Проверка: **Admin → Shovels** в Management UI, статус должен быть `Running`.
 
 ---
+
+
 
 ### Бонус 3: Federation для мульти-датацентрной симуляции
 
@@ -872,21 +1076,31 @@ curl -u guest:guest -X PUT \
 
 ---
 
+
+
 ## Production: как надо и как не надо
 
 > Быстрая шпаргалка о том, **что делать нужно**, **что нельзя**, и **какие практики являются антипаттернами** при эксплуатации RabbitMQ в продакшене.
 
+
+
 ### ✅ Что НУЖНО делать
+
+
 
 #### Архитектура и кластеризация
 
-| Практика | Почему важно |
-|----------|-------------|
-| Минимум 3 узла в кластере | Quorum Queues требуют большинства (2 из 3, 3 из 5). На 2 узлах при partition теряется доступность |
-| Quorum Queues вместо Classic queues | Raft-консенсус, устойчивость к partition. Classic mirrored queues удалены в RabbitMQ 4.x |
-| Нечётное количество узлов | Предотвращает split-brain: при 3 узлах — 2 здоровых из 3 = кластер жив |
-| Узлы в разных AZ/зонах | Выживание при аварии одной зоны |
-| Отдельные диски для Mnesia и msg_store | Снижает contention между метаданными и данными сообщений |
+
+| Практика                               | Почему важно                                                                                      |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Минимум 3 узла в кластере              | Quorum Queues требуют большинства (2 из 3, 3 из 5). На 2 узлах при partition теряется доступность |
+| Quorum Queues вместо Classic queues    | Raft-консенсус, устойчивость к partition. Classic mirrored queues удалены в RabbitMQ 4.x          |
+| Нечётное количество узлов              | Предотвращает split-brain: при 3 узлах — 2 здоровых из 3 = кластер жив                            |
+| Узлы в разных AZ/зонах                 | Выживание при аварии одной зоны                                                                   |
+| Отдельные диски для Mnesia и msg_store | Снижает contention между метаданными и данными сообщений                                          |
+
+
+
 
 #### Конфигурация (production-профиль)
 
@@ -904,16 +1118,20 @@ management.listener.ssl = true
 prometheus.return_per_object_metrics = true
 ```
 
+
+
 #### Безопасность
 
-| Практика | Реализация |
-|----------|-----------|
-| Включи TLS | `listeners.ssl.default = 5671` + сертификаты (см. Бонус 1) |
-| Удали guest-аккаунт | `rabbitmqctl delete_user guest` |
-| Отдельный user на сервис | Не используй одного user для всех producers/consumers |
-| ACL | Ограничь доступ к очередям по vhost и routing key |
-| Firewall на management-порт | 15672 — только для admin-подсети |
-| Vhost на каждый env | dev/staging/prod — разные vhost-ы (см. `scripts/create-vhost.sh`) |
+
+| Практика                    | Реализация                                                        |
+| --------------------------- | ----------------------------------------------------------------- |
+| Включи TLS                  | `listeners.ssl.default = 5671` + сертификаты (см. Бонус 1)        |
+| Удали guest-аккаунт         | `rabbitmqctl delete_user guest`                                   |
+| Отдельный user на сервис    | Не используй одного user для всех producers/consumers             |
+| ACL                         | Ограничь доступ к очередям по vhost и routing key                 |
+| Firewall на management-порт | 15672 — только для admin-подсети                                  |
+| Vhost на каждый env         | dev/staging/prod — разные vhost-ы (см. `scripts/create-vhost.sh`) |
+
 
 ```bash
 rabbitmqctl add_user app_producer "$(openssl rand -base64 24)"
@@ -923,63 +1141,83 @@ rabbitmqctl add_user app_consumer "$(openssl rand -base64 24)"
 rabbitmqctl set_permissions -p /production app_consumer "" ".*" ""   # только consume
 ```
 
+
+
 #### Мониторинг и алерты
 
-| Метрика | Порог алерта |
-|---------|-------------|
-| `rabbitmq_queue_messages` | > 10 000 или растёт быстрее 1000/5 мин |
-| `rabbitmq_queue_consumers` | = 0 дольше 2 минут |
-| `rabbitmq_process_resident_memory_bytes` | > 80% от `rabbitmq_resident_memory_limit_bytes` |
-| `rabbitmq_disk_space_available_bytes` | < 2GB |
-| `rabbitmq_connections` | Резкий скачок (> 2x от нормы) |
 
-Готовые правила — [`monitoring/alerts.yml`](monitoring/alerts.yml), теория — [`docs/monitoring.md`](docs/monitoring.md).
+| Метрика                                  | Порог алерта                                    |
+| ---------------------------------------- | ----------------------------------------------- |
+| `rabbitmq_queue_messages`                | > 10 000 или растёт быстрее 1000/5 мин          |
+| `rabbitmq_queue_consumers`               | = 0 дольше 2 минут                              |
+| `rabbitmq_process_resident_memory_bytes` | > 80% от `rabbitmq_resident_memory_limit_bytes` |
+| `rabbitmq_disk_space_available_bytes`    | < 2GB                                           |
+| `rabbitmq_connections`                   | Резкий скачок (> 2x от нормы)                   |
+
+
+Готовые правила — `[monitoring/alerts.yml](monitoring/alerts.yml)`, теория — `[docs/monitoring.md](docs/monitoring.md)`.
 
 #### Backup и Recovery
 
-| Практика | Как делать |
-|----------|-----------|
-| Бэкап definitions | `rabbitmqadmin export /backup/definitions-$(date +%Y%m%d).json` ежедневно через cron |
-| Бэкап Mnesia | `rabbitmqctl stop_app && rsync /var/lib/rabbitmq/mnesia/ /backup/mnesia/ && rabbitmqctl start_app` |
-| Бэкап Erlang Cookie | Без cookie не восстановить кластер — храните в Vault/Secrets Manager |
-| Runbook | Документируйте: add node, remove node, recover from partition, recover from disk failure |
+
+| Практика            | Как делать                                                                                         |
+| ------------------- | -------------------------------------------------------------------------------------------------- |
+| Бэкап definitions   | `rabbitmqadmin export /backup/definitions-$(date +%Y%m%d).json` ежедневно через cron               |
+| Бэкап Mnesia        | `rabbitmqctl stop_app && rsync /var/lib/rabbitmq/mnesia/ /backup/mnesia/ && rabbitmqctl start_app` |
+| Бэкап Erlang Cookie | Без cookie не восстановить кластер — храните в Vault/Secrets Manager                               |
+| Runbook             | Документируйте: add node, remove node, recover from partition, recover from disk failure           |
+
 
 ---
 
+
+
 ### ❌ Чего НЕЛЬЗЯ делать
+
+
 
 #### Антипаттерны конфигурации
 
-| ❌ Антипаттерн | Почему плохо | ✅ Правильно |
-|----------------|----------------|-------------|
-| `prefetch_count = 0` (безлимитный) | Один consumer забирает всё, риск OOM | `prefetch_count = 5-50` |
-| `auto_ack = true` в production | Потеря сообщений при crash consumer-а | `auto_ack = false` + явный `basic_ack()` |
-| Classic Mirror Queues | Удалены в RabbitMQ 4.x, split-brain risk | Quorum Queues |
-| Статический `peer_discovery_backend = classic_config` | Нужно менять конфиг при каждом узле | K8s API / Consul / DNS discovery |
-| Нет `x-dead-letter-exchange` | «Битые» сообщения циркулируют бесконечно | DLX + DLQ на каждый сервис |
-| Один exchange для всех сервисов | Маршрутизация неуправляема | Изолированные exchanges per service |
-| Нет message TTL | Очередь растёт бесконечно при падении consumer-а | `x-message-ttl` или policy |
+
+| ❌ Антипаттерн                                         | Почему плохо                                     | ✅ Правильно                              |
+| ----------------------------------------------------- | ------------------------------------------------ | ---------------------------------------- |
+| `prefetch_count = 0` (безлимитный)                    | Один consumer забирает всё, риск OOM             | `prefetch_count = 5-50`                  |
+| `auto_ack = true` в production                        | Потеря сообщений при crash consumer-а            | `auto_ack = false` + явный `basic_ack()` |
+| Classic Mirror Queues                                 | Удалены в RabbitMQ 4.x, split-brain risk         | Quorum Queues                            |
+| Статический `peer_discovery_backend = classic_config` | Нужно менять конфиг при каждом узле              | K8s API / Consul / DNS discovery         |
+| Нет `x-dead-letter-exchange`                          | «Битые» сообщения циркулируют бесконечно         | DLX + DLQ на каждый сервис               |
+| Один exchange для всех сервисов                       | Маршрутизация неуправляема                       | Изолированные exchanges per service      |
+| Нет message TTL                                       | Очередь растёт бесконечно при падении consumer-а | `x-message-ttl` или policy               |
+
+
+
 
 #### Антипаттерны эксплуатации
 
-| ❌ Антипаттерн | Что происходит | ✅ Правильно |
-|----------------|------------------|-------------|
-| `rabbitmqctl force_boot` без понимания | Риск потери данных при partition | Сначала `cluster_status`, force_boot — последняя мера |
-| Ручное перемещение очередей между узлами | Нарушает балансировку | `queue_master_locator = min-masters` |
-| Удаление узла без `forget_cluster_node` | «Призрачный» узел в кластере | `rabbitmqctl forget_cluster_node <node>` перед выключением |
-| Игнорирование memory alarms | Producer-ы блокируются | Alerts + автоскейлинг |
-| Диск с < 5GB свободного места | Disk alarm → блокировка → outage | Мониторинг + алерт при < 10GB |
-| Один vhost для всех окружений | Dev может повлиять на prod | Отдельный vhost на env |
+
+| ❌ Антипаттерн                            | Что происходит                   | ✅ Правильно                                                |
+| ---------------------------------------- | -------------------------------- | ---------------------------------------------------------- |
+| `rabbitmqctl force_boot` без понимания   | Риск потери данных при partition | Сначала `cluster_status`, force_boot — последняя мера      |
+| Ручное перемещение очередей между узлами | Нарушает балансировку            | `queue_master_locator = min-masters`                       |
+| Удаление узла без `forget_cluster_node`  | «Призрачный» узел в кластере     | `rabbitmqctl forget_cluster_node <node>` перед выключением |
+| Игнорирование memory alarms              | Producer-ы блокируются           | Alerts + автоскейлинг                                      |
+| Диск с < 5GB свободного места            | Disk alarm → блокировка → outage | Мониторинг + алерт при < 10GB                              |
+| Один vhost для всех окружений            | Dev может повлиять на prod       | Отдельный vhost на env                                     |
+
+
+
 
 #### Антипаттерны кода
 
 **Producer — неправильно:**
+
 ```python
 # Без publisher confirms — сообщения могут потеряться при сбое брокера
 channel.basic_publish(exchange="orders", routing_key="new", body=json.dumps(order))
 ```
 
 **Producer — правильно** (см. `producer/producer.py`):
+
 ```python
 channel.confirm_delivery()
 try:
@@ -996,6 +1234,7 @@ except pika.exceptions.NackError:
 ```
 
 **Consumer — неправильно:**
+
 ```python
 # auto_ack=True + нет обработки ошибок — при сбое сообщение теряется навсегда
 for method, properties, body in channel.consume("orders", auto_ack=True):
@@ -1003,6 +1242,7 @@ for method, properties, body in channel.consume("orders", auto_ack=True):
 ```
 
 **Consumer — правильно** (см. `consumer/consumer.py` + `consumer/dlq_handler.py`):
+
 ```python
 def callback(ch, method, properties, body):
     retry_count = (properties.headers or {}).get("x-retry-count", 0)
@@ -1016,6 +1256,8 @@ def callback(ch, method, properties, body):
 ```
 
 ---
+
+
 
 ### 🔥 Production Readiness Checklist
 
@@ -1034,7 +1276,11 @@ def callback(ch, method, properties, body):
 
 ---
 
+
+
 ## Чеклист для собеседования
+
+
 
 ### Mid-level DevOps
 
@@ -1048,6 +1294,8 @@ def callback(ch, method, properties, body):
 - [ ] Docker: запуск RabbitMQ через Docker Compose, healthchecks
 - [ ] Management UI: навигация, просмотр очередей, consumer-ов, каналов
 
+
+
 ### Senior DevOps
 
 - [ ] Quorum Queues: зачем нужны, как работают (Raft), отличия от classic queues
@@ -1060,6 +1308,8 @@ def callback(ch, method, properties, body):
 - [ ] Prometheus integration: настройка метрик, кастомные дашборды
 - [ ] Инцидент-менеджмент: диагностика partition, recovery procedures, runbook
 
+
+
 ### Архитектурные вопросы
 
 - [ ] RabbitMQ vs Kafka: когда что выбирать, trade-offs
@@ -1070,13 +1320,17 @@ def callback(ch, method, properties, body):
 
 ---
 
+
+
 ## Дополнительные материалы
 
-- [`docs/concepts.md`](docs/concepts.md) — теория: exchanges, queues, bindings, routing key, DLX
-- [`docs/clustering.md`](docs/clustering.md) — теория: кластеризация, Raft, quorum queues, partition handling
-- [`docs/monitoring.md`](docs/monitoring.md) — теория: метрики по уровням (queue/channel/node), PromQL, алерты
+- `[docs/concepts.md](docs/concepts.md)` — теория: exchanges, queues, bindings, routing key, DLX
+- `[docs/clustering.md](docs/clustering.md)` — теория: кластеризация, Raft, quorum queues, partition handling
+- `[docs/monitoring.md](docs/monitoring.md)` — теория: метрики по уровням (queue/channel/node), PromQL, алерты
 
 ---
+
+
 
 ## Что было исправлено в этой версии
 
@@ -1089,7 +1343,7 @@ def callback(ch, method, properties, body):
 5. Лог DLQ-обработчика подставлял `_dlq_timestamp` в текст про причину сбоя (баг копипасты) — исправлено.
 6. Аргументы очереди `orders` при объявлении в `producer.py`/`consumer.py` не совпадали с `definitions.json` (отсутствовали `x-dead-letter-exchange`/`x-dead-letter-routing-key`), что могло приводить к `406 PRECONDITION_FAILED` — выровнены через общую константу.
 7. `rabbitmq.conf` и `definitions.json` не были отражены в дереве структуры репозитория, хотя монтировались в `docker-compose.yml` — добавлены.
-8. `.env` был заявлен, но не использовался — `docker-compose.yml` теперь читает креды/версии/порты из `.env`. При этом сам `.env` — антипаттерн для коммита в git (даже с дефолтными кредами): в репозиторий уходит только шаблон [`.env.example`](.env.example), а `.env` — в `.gitignore` и создаётся локально через `cp .env.example .env`.
+8. `.env` был заявлен, но не использовался — `docker-compose.yml` теперь читает креды/версии/порты из `.env`. При этом сам `.env` — антипаттерн для коммита в git (даже с дефолтными кредами): в репозиторий уходит только шаблон `[.env.example](.env.example)`, а `.env` — в `.gitignore` и создаётся локально через `cp .env.example .env`.
 9. `monitoring/grafana/grafana.ini` монтировался как файл без описанного содержимого — добавлен минимальный валидный конфиг.
 10. В Кейсе 7 предлагалось добавить `vm_memory_high_watermark.absolute`, конфликтующий с уже заданным `vm_memory_high_watermark.relative` — в инструкции явно указано, что один параметр должен заменить другой.
 11. Правила алертинга из раздела Production не были подключены ни к одному файлу — вынесены в `monitoring/alerts.yml` и подключены через `rule_files`.
@@ -1098,7 +1352,7 @@ def callback(ch, method, properties, body):
 14. `producer.py` вызывал `channel.confirm_delivery()` внутри `publish_message()`, то есть при каждой отправке — pika разрешает включать confirm-режим только один раз на канал, поэтому начиная со второго сообщения в лог летела ошибка `confirm_delivery: confirmation was already enabled on channel=1`. Включение confirms перенесено в `main()`, один раз на канал.
 15. **Ключевой логический баг:** `get_routing_key()` в `producer.py` всегда возвращала `order.{type}.{urgent|regular}` независимо от того, в какой exchange публикуется сообщение. Для `orders-direct` в `definitions.json` объявлен binding с фиксированным routing key `order.new` — несовпадающий routing key делал `standard`-заказы **unroutable** (сообщение молча отбрасывалось брокером, publisher confirm при этом всё равно приходил успешным, так как `mandatory` не задан). На практике это означало, что очередь `orders` никогда не получала сообщений вообще. Routing key теперь вычисляется в зависимости от целевого exchange (`order.new` для `orders-direct`, паттерн `order.{type}.{urgent|regular}` только для `orders-topic`).
 16. Из-за прошлого пункта и того, что приоритет однозначно определяется типом заказа (`PRIORITY_MAP`), у Кейса 5 (приоритетные очереди) не было реального сценария: в `orders` попадают только `standard`-заказы, а у них всегда одинаковый приоритет — сравнивать было нечего. Добавлен флаг `--priority` в `producer.py`, форсирующий приоритет независимо от типа, и обновлены шаги Кейса 5.
-17. **Ключевой логический баг в `consumer.py`:** retry-логика опиралась на заголовок `x-retry-count`, который должен был инкрементироваться и «доезжать» до следующей попытки через `basic_nack(requeue=True)`. Но `nack` с `requeue=True` возвращает сообщение в очередь с **неизменными** исходными properties — заголовок никогда фактически не увеличивался, и сообщение бесконечно кружило между очередью и consumer-ом, никогда не достигая `MAX_RETRIES` и DLQ (в логах это выглядело как вечные `Retrying (1/3)` для одного и того же `order_id`). Исправлено на явный `ack` исходного сообщения + `basic_publish` в ту же очередь (через nameless-exchange, routing key = имя очереди) с обновлённым заголовком — так retry-счётчик реально сохраняется между попытками.
+17. **Ключевой логический баг в** `consumer.py`**:** retry-логика опиралась на заголовок `x-retry-count`, который должен был инкрементироваться и «доезжать» до следующей попытки через `basic_nack(requeue=True)`. Но `nack` с `requeue=True` возвращает сообщение в очередь с **неизменными** исходными properties — заголовок никогда фактически не увеличивался, и сообщение бесконечно кружило между очередью и consumer-ом, никогда не достигая `MAX_RETRIES` и DLQ (в логах это выглядело как вечные `Retrying (1/3)` для одного и того же `order_id`). Исправлено на явный `ack` исходного сообщения + `basic_publish` в ту же очередь (через nameless-exchange, routing key = имя очереди) с обновлённым заголовком — так retry-счётчик реально сохраняется между попытками.
 18. Healthcheck RabbitMQ в `docker-compose.yml`/`docker-compose.cluster.yml` имел слишком короткий бюджет ожидания (`start_period: 30s` + `retries: 5` × `interval: 15s` ≈ 105с). На практике первый старт (миграции feature flags, импорт `definitions.json`) может занимать заметно дольше — в одном из тестовых прогонов заняло 145с — из-за чего Docker помечал полностью исправный, но ещё стартующий контейнер как `unhealthy`, и зависимые сервисы не поднимались (`dependency failed to start`). Увеличены `start_period` до 90s и `retries` до 10 (бюджет ≈ 240с); `scripts/setup.sh` синхронизирован (таймаут поднят до 240с).
 
 Все перечисленные проблемы обнаружены и проверены практически: сервисы поднимались через `docker compose up`, было пройдено сквозное подтверждение работы producer → RabbitMQ → consumer → DLQ → Prometheus → Grafana.
@@ -1107,3 +1361,4 @@ def callback(ch, method, properties, body):
 
 > **Актуально на июль 2026**
 > Руководство подготовлено для RabbitMQ 4.1 (management) с использованием Docker Compose v2, Python 3.12, Prometheus v2.54.1, Node Exporter v1.12.1 и Grafana 11.1.0.
+

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Tears down the lab stack between lab cases. By default it only purges the
-# 'orders' and 'orders-dlq' queues over the Management API; pass --full to
-# also stop containers and remove all persisted volumes (fresh start).
+# Tears down the lab stack between lab cases. By default it purges all lab
+# queues over the Management API; pass --full to also stop containers and
+# remove all persisted volumes (fresh start).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -13,9 +13,20 @@ readonly MGMT_PORT="${RABBITMQ_MANAGEMENT_PORT:-15672}"
 readonly ADMIN_USER="${RABBITMQ_USER:-guest}"
 readonly ADMIN_PASS="${RABBITMQ_PASS:-guest}"
 
+# All queues declared in definitions.json for this lab.
+readonly LAB_QUEUES=(
+  orders
+  orders-direct-q
+  orders-dlq
+  orders-fanout-q1
+  orders-fanout-q2
+  orders-topic-regular
+  orders-topic-urgent
+)
+
 usage() {
   echo "Usage: $0 [--full]"
-  echo "  (no args)  purge the 'orders' and 'orders-dlq' queues, keep the stack running"
+  echo "  (no args)  purge all lab queues, keep the stack running"
   echo "  --full     docker compose down -v (stops everything, removes volumes)"
 }
 
@@ -44,8 +55,9 @@ main() {
     return 0
   fi
 
-  purge_queue "orders"
-  purge_queue "orders-dlq"
+  for queue in "${LAB_QUEUES[@]}"; do
+    purge_queue "${queue}"
+  done
   echo "Done. Queues purged, stack left running."
 }
 

@@ -48,7 +48,7 @@ def build_message(size_bytes: int) -> dict:
     }
 
 
-def worker(worker_id: int, count: int, size_bytes: int) -> list:
+def worker(worker_id: int, count: int, size_bytes: int, transient: bool) -> list:
     """Publishes `count` messages from a dedicated connection and returns latencies (seconds)."""
     credentials = pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASS)
     params = pika.ConnectionParameters(
@@ -56,11 +56,16 @@ def worker(worker_id: int, count: int, size_bytes: int) -> list:
         port=RABBITMQ_PORT,
         credentials=credentials,
         heartbeat=600,
+        blocked_connection_timeout=30,
     )
     connection = pika.BlockingConnection(params)
     channel = connection.channel()
     channel.queue_declare(queue="orders", durable=True, arguments=ORDERS_QUEUE_ARGS)
     channel.confirm_delivery()
+
+    # delivery_mode 2 = persistent (default); 1 = transient (stays in RAM longer,
+    # useful when demonstrating memory pressure — see lab case 7).
+    delivery_mode = 1 if transient else 2
 
     latencies = []
     try:
@@ -69,7 +74,7 @@ def worker(worker_id: int, count: int, size_bytes: int) -> list:
             body = json.dumps(message).encode("utf-8")
             properties = BasicProperties(
                 content_type="application/json",
-                delivery_mode=2,
+                delivery_mode=delivery_mode,
                 priority=message["priority"],
             )
             start = time.perf_counter()
@@ -113,6 +118,11 @@ def main() -> int:
     parser.add_argument("--total", type=int, default=1000, help="Total messages to publish")
     parser.add_argument("--workers", type=int, default=5, help="Number of concurrent publisher connections")
     parser.add_argument("--size", type=int, default=0, help="Extra padding bytes per message body")
+    parser.add_argument(
+        "--transient",
+        action="store_true",
+        help="Publish non-persistent messages (delivery_mode=1); better for memory-pressure demos",
+    )
     args = parser.parse_args()
 
     if args.workers < 1 or args.total < 1:
@@ -123,13 +133,17 @@ def main() -> int:
     remainder = args.total % args.workers
     counts = [per_worker + (1 if i < remainder else 0) for i in range(args.workers)]
 
-    print(f"Publishing {args.total} messages using {args.workers} workers...")
+    mode = "transient" if args.transient else "persistent"
+    print(
+        f"Publishing {args.total} messages using {args.workers} workers "
+        f"(size={args.size}, mode={mode})..."
+    )
     start = time.perf_counter()
     all_latencies = []
 
     with ThreadPoolExecutor(max_workers=args.workers) as executor:
         futures = [
-            executor.submit(worker, i, count, args.size)
+            executor.submit(worker, i, count, args.size, args.transient)
             for i, count in enumerate(counts)
             if count > 0
         ]
