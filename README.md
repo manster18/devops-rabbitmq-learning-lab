@@ -56,6 +56,7 @@ devops-rabbitmq-learning-lab/
 ├── .env                                # Ваша локальная копия .env.example — git-ignored, создаётся вручную
 ├── docker-compose.yml                  # Оркестрация всех сервисов
 ├── docker-compose.cluster.yml          # Кейс 8: 2-узловой кластер
+├── docker-compose.tls.yml              # Бонус 1: overlay (порт 5671 + mount ./tls)
 ├── rabbitmq.conf                       # Конфигурация брокера
 ├── definitions.json                    # Exchanges/queues/bindings, загружаемые при старте
 │
@@ -86,6 +87,7 @@ devops-rabbitmq-learning-lab/
 │   ├── setup.sh                        # Первичный запуск + ожидание healthy
 │   ├── create-vhost.sh                 # Создание vhost + прав доступа
 │   ├── load-test.py                    # Нагрузочное тестирование (concurrency, latency)
+│   ├── tls-smoke-test.py               # Бонус 1: проверка mTLS publish/consume
 │   ├── cleanup.sh                      # Очистка очередей / полный сброс стенда
 │   └── generate-tls-certs.sh           # Генерация CA/server/client сертификатов (Бонус 1)
 │
@@ -971,49 +973,222 @@ print(f'Leader: {data.get(\"leader\", \"N/A\")}, Online: {data.get(\"online\", [
 
 
 
-### Бонус 1: TLS для RabbitMQ соединений
+### Бонус 1: TLS для RabbitMQ соединений (mutual TLS)
 
-**Цель:** Настроить шифрование соединений между producer/consumer и RabbitMQ.
+**Цель:** Включить шифрование AMQP на порту `5671` и **взаимную** проверку сертификатов (mTLS): брокер проверяет клиентский сертификат, клиент проверяет сертификат брокера.
 
-**Шаги:**
+**Что получится на выходе**
 
-1. Сгенерируйте сертификаты одной командой (обёртка над `openssl`):
+```text
+Producer/Consumer --TLS+client cert--> :5671 RabbitMQ
+                 (порт 5672 пока остаётся открытым для остальных кейсов)
+```
+
+| Роль | Файл | Зачем |
+|------|------|--------|
+| CA | `tls/ca.pem` (+ `ca.key`) | Кем подписаны server/client; клиент и брокер доверяют этой CA |
+| Server | `tls/server.pem` + `server.key` | Идентичность брокера (`CN=rabbitmq`, SAN: `rabbitmq`, `localhost`, `127.0.0.1`) |
+| Client | `tls/client.pem` + `client.key` | Идентичность клиента; без него брокер отвергнет connect (`fail_if_no_peer_cert = true`) |
+
+---
+
+#### Шаг 0. Предусловия
+
+- Основной стенд (не cluster) доступен: `docker compose up -d rabbitmq`
+- Установлен `openssl` (`openssl version`)
+- Для smoke-теста с хоста: `pip install -r producer/requirements.txt`  
+  либо запускайте тест через контейнер `producer` (см. шаг 6)
+
+Если сейчас запущен cluster-compose — сначала `docker compose -f docker-compose.cluster.yml down`, затем обычный `docker compose up -d`.
+
+---
+
+#### Шаг 1. Сгенерировать сертификаты
 
 ```bash
 ./scripts/generate-tls-certs.sh
+ls -la tls/
 ```
 
-Файлы появятся в `tls/` (директория в `.gitignore`, секреты никогда не коммитятся).
+Скрипт создаёт одноразовый CA, server и client cert в `tls/` (в `.gitignore` — в git не попадёт).
 
-1. Добавьте в `rabbitmq.conf`:
+**Что происходит:** `openssl` выпускает собственный CA и подписывает им server/client. В server-сертификат добавляются SAN, чтобы hostname verification работал и с хоста (`localhost`), и из Docker-сети (`rabbitmq`).
+
+---
+
+#### Шаг 2. Включить TLS в `rabbitmq.conf`
+
+В конец [`rabbitmq.conf`](rabbitmq.conf) **добавьте** (не удаляя остальное):
 
 ```ini
+# --- Bonus 1: TLS / mTLS (AMQP on 5671) ---
 listeners.ssl.default = 5671
 ssl_options.cacertfile = /etc/rabbitmq/ssl/ca.pem
-ssl_options.certfile = /etc/rabbitmq/ssl/server.pem
-ssl_options.keyfile = /etc/rabbitmq/ssl/server.key
-ssl_options.verify = verify_peer
+ssl_options.certfile   = /etc/rabbitmq/ssl/server.pem
+ssl_options.keyfile    = /etc/rabbitmq/ssl/server.key
+ssl_options.verify     = verify_peer
 ssl_options.fail_if_no_peer_cert = true
 ```
 
-и смонтируйте `./tls` как `/etc/rabbitmq/ssl` в `docker-compose.yml`.
+**Что означают опции**
 
-1. Подключитесь с TLS:
+| Опция | Смысл |
+|-------|--------|
+| `listeners.ssl.default = 5671` | Брокер слушает AMQP-over-TLS на 5671 |
+| `cacertfile` | CA, которой брокер доверяет при проверке client cert |
+| `certfile` / `keyfile` | Собственный сертификат и ключ брокера |
+| `verify = verify_peer` | Требовать и проверять сертификат клиента |
+| `fail_if_no_peer_cert = true` | Без client cert — отказ (настоящий mTLS) |
+
+> Обычный `listeners` на `5672` **не отключаем** — остальные лабораторные кейсы продолжают работать. В проде часто ставят `listeners.tcp = none`, оставляя только TLS.
+
+---
+
+#### Шаг 3. Смонтировать сертификаты и открыть порт 5671
+
+Используйте overlay [`docker-compose.tls.yml`](docker-compose.tls.yml) — он только добавляет volume `./tls → /etc/rabbitmq/ssl` и публикует порт `5671`:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.tls.yml up -d rabbitmq
+docker compose ps rabbitmq
+```
+
+Проверьте, что брокер healthy и слушает 5671:
+
+```bash
+docker compose logs rabbitmq 2>&1 | grep -i -E 'ssl|tls|5671|started TCP listener' | tail -20
+docker compose exec rabbitmq rabbitmq-diagnostics listeners
+```
+
+В выводе `listeners` должны быть и `amqp` на 5672, и `amqp/ssl` на 5671.
+
+---
+
+#### Шаг 4. Проверка: с сертификатами — да, без — нет
+
+**4a. openssl (только доверие к server cert)**
+
+```bash
+openssl s_client -connect localhost:5671 -CAfile tls/ca.pem \
+  -cert tls/client.pem -key tls/client.key -brief </dev/null
+```
+
+Ожидаемо: `CONNECTION ESTABLISHED`, `Verification: OK`, `Peer certificate: CN=rabbitmq`.
+
+> ⚠️ `Verification: OK` значит лишь то, что **клиент** принял **серверный** сертификат. Это ещё не mTLS.
+
+Без `-cert/-key` openssl часто всё равно пишет `CONNECTION ESTABLISHED` (путаница TLS 1.3/`-brief`). Отказ брокера смотрите в логах:
+
+```bash
+openssl s_client -connect localhost:5671 -CAfile tls/ca.pem -brief </dev/null
+docker compose logs rabbitmq --since 1m | grep -i certificate_required
+# ожидаемо: Fatal - Certificate Required
+```
+
+**4b. Реальная проверка mTLS через pika** (здесь уже видна ошибка без client cert)
+
+Обязательно с TLS-overlay, иначе `compose run` может пересоздать брокер без mount `./tls`:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.tls.yml run --rm \
+  -v "$(pwd)/scripts:/app/scripts:ro" \
+  -v "$(pwd)/tls:/certs:ro" \
+  -e RABBITMQ_HOST=rabbitmq \
+  -e TLS_CA=/certs/ca.pem \
+  -e TLS_CERT=/certs/client.pem \
+  -e TLS_KEY=/certs/client.key \
+  producer python scripts/tls-smoke-test.py --negative
+```
+
+Ожидаемый вывод:
+
+```text
+[PASS] mTLS on 5671: connected, published and consumed b'{"ok":true,"via":"tls-smoke-test"}'
+--- negative checks (expected FAIL) ---
+[FAIL] TLS without client cert: ... TLSV13_ALERT_CERTIFICATE_REQUIRED ...
+[PASS] broker rejected connection without client cert (as expected)
+[INFO] plain 5672 still works — expected unless you set listeners.tcp = none
+```
+
+Итого: **с** `client.pem`/`client.key` — publish/consume на `5671` проходит; **без** них — `TLSV13_ALERT_CERTIFICATE_REQUIRED`. Строка `[FAIL] TLS without client cert` здесь как раз ожидаема и означает, что mTLS настроен правильно.
+
+В Management UI (`http://localhost:15672`) → **Connections** у успешной сессии будут детали SSL/TLS.
+
+---
+
+#### Шаг 5. Подключение из Python (pika) — как это выглядит в коде
 
 ```python
 import ssl
 import pika
 
 context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+context.minimum_version = ssl.TLSVersion.TLSv1_2
 context.load_verify_locations("tls/ca.pem")
 context.load_cert_chain("tls/client.pem", "tls/client.key")
+context.verify_mode = ssl.CERT_REQUIRED
+context.check_hostname = True
 
 params = pika.ConnectionParameters(
-    host="localhost",
+    host="localhost",          # из контейнера producer — host="rabbitmq"
     port=5671,
-    ssl_options=pika.SSLOptions(context),
+    credentials=pika.PlainCredentials("guest", "guest"),
+    ssl_options=pika.SSLOptions(context, server_hostname="localhost"),
 )
+
+connection = pika.BlockingConnection(params)
+channel = connection.channel()
+print("mTLS OK")
+connection.close()
 ```
+
+**Что здесь важно:** шифрование (TLS) и логин/пароль (PLAIN `guest`/`guest`) — разные слои. mTLS доказывает «кто на том конце провода»; username/password по-прежнему авторизуют в vhost.
+
+---
+
+#### Шаг 6. (Опционально) Повтор smoke-теста с хоста
+
+Если хотите гонять тот же скрипт локально (нужен venv + `pip install -r producer/requirements.txt`):
+
+```bash
+python scripts/tls-smoke-test.py --negative
+```
+
+Иначе достаточно шага **4b**.
+
+---
+
+#### Шаг 7. (Опционально) Producer по TLS
+
+Одноразовый publish через тот же SSL context можно встроить в свой скрипт; для лабы достаточно smoke-теста. Если гоняете штатный `producer.py`, ему нужны правки (`ssl_options` + порт 5671) — он из коробки ходит на plain `5672`.
+
+---
+
+#### Шаг 8. Откат (вернуть обычный стенд)
+
+1. Удалите или закомментируйте блок `# --- Bonus 1: TLS` в `rabbitmq.conf`.
+2. Поднимите брокер **без** TLS-overlay:
+
+```bash
+docker compose up -d rabbitmq
+```
+
+3. (По желанию) удалите локальные сертификаты: `rm -rf tls/`
+
+Порт 5671 перестанет слушаться; кейсы 1–7 снова только на `5672`.
+
+---
+
+**Ожидаемый результат:** AMQP-over-TLS на `5671` с обязательным client certificate; smoke-тест `[PASS]`; connect без client cert — отказ; plain `5672` в этой лабе остаётся для остальных упражнений.
+
+**Типичные проблемы**
+
+| Симптом | Причина / что сделать |
+|---------|------------------------|
+| Брокер не стартует, в логах `ssl_options` / file not found | Нет mount `./tls` или забыли `generate-tls-certs.sh` — используйте `docker-compose.tls.yml` |
+| `CERTIFICATE_VERIFY_FAILED` / hostname mismatch | Подключаетесь не к тому host; в SAN есть `localhost` и `rabbitmq` — совпадите `RABBITMQ_HOST` / `server_hostname` |
+| Handshake OK в openssl, pika падает | Проверьте пути к `ca/client` и что `SSLOptions(..., server_hostname=...)` совпадает с host |
+| Permission denied на `.key` | Перегенерируйте сертификаты скриптом (он ставит `chmod 644`) |
 
 ---
 
@@ -1327,35 +1502,6 @@ def callback(ch, method, properties, body):
 - `[docs/concepts.md](docs/concepts.md)` — теория: exchanges, queues, bindings, routing key, DLX
 - `[docs/clustering.md](docs/clustering.md)` — теория: кластеризация, Raft, quorum queues, partition handling
 - `[docs/monitoring.md](docs/monitoring.md)` — теория: метрики по уровням (queue/channel/node), PromQL, алерты
-
----
-
-
-
-## Что было исправлено в этой версии
-
-Черновик руководства содержал несколько неточностей, которые исправлены в этом репозитории:
-
-1. В `docker-compose.yml` отсутствовал сервис `node-exporter`, хотя `prometheus.yml` его скрейпил, а он заявлен в стеке технологий — добавлен.
-2. Формат `rabbitmq.json` для Grafana был в виде обёртки API-импорта дашбордов (`{"dashboard": ..., "overwrite": true}`), а не «сырой» модели, читаемой file-provisioning механизмом — переписан.
-3. Часть PromQL-запросов ссылалась на несуществующие метрики: `rabbitmq_queue_messages_unacknowledged` (правильно — `rabbitmq_queue_messages_unacked`), `rabbitmq_queue_messages_delivered_total`/`_acknowledged_total` на уровне очереди (существуют только на уровне канала, без `queue`-лейбла, и без "acknowledged"), `node_filesystem_avail_bytes` с недостижимым для named-volume mountpoint (заменено на нативную `rabbitmq_disk_space_available_bytes`).
-4. `dlq_handler` был функцией внутри `consumer.py`, хотя `Dockerfile` и структура репозитория предполагали отдельный файл `dlq_handler.py` — вынесен в отдельный модуль.
-5. Лог DLQ-обработчика подставлял `_dlq_timestamp` в текст про причину сбоя (баг копипасты) — исправлено.
-6. Аргументы очереди `orders` при объявлении в `producer.py`/`consumer.py` не совпадали с `definitions.json` (отсутствовали `x-dead-letter-exchange`/`x-dead-letter-routing-key`), что могло приводить к `406 PRECONDITION_FAILED` — выровнены через общую константу.
-7. `rabbitmq.conf` и `definitions.json` не были отражены в дереве структуры репозитория, хотя монтировались в `docker-compose.yml` — добавлены.
-8. `.env` был заявлен, но не использовался — `docker-compose.yml` теперь читает креды/версии/порты из `.env`. При этом сам `.env` — антипаттерн для коммита в git (даже с дефолтными кредами): в репозиторий уходит только шаблон `[.env.example](.env.example)`, а `.env` — в `.gitignore` и создаётся локально через `cp .env.example .env`.
-9. `monitoring/grafana/grafana.ini` монтировался как файл без описанного содержимого — добавлен минимальный валидный конфиг.
-10. В Кейсе 7 предлагалось добавить `vm_memory_high_watermark.absolute`, конфликтующий с уже заданным `vm_memory_high_watermark.relative` — в инструкции явно указано, что один параметр должен заменить другой.
-11. Правила алертинга из раздела Production не были подключены ни к одному файлу — вынесены в `monitoring/alerts.yml` и подключены через `rule_files`.
-12. `producer/Dockerfile` и `consumer/Dockerfile` задавали `ENTRYPOINT ["python", "producer.py"]`/`["python", "consumer.py"]`, при этом все команды быстрого старта и лабораторных кейсов вызывают `docker compose run --rm producer python producer.py ...` — при наличии `ENTRYPOINT` это приводило к двойному запуску скрипта (`python producer.py python producer.py --count 10 ...`) и ошибке `unrecognized arguments`. `ENTRYPOINT` убран — команда теперь полностью задаётся вызывающей стороной.
-13. `definitions.json` не содержал секции `vhosts`/`users`/`permissions`. Начиная с некоторой версии RabbitMQ, если задан `management.load_definitions`, брокер **пропускает** штатный шаг создания дефолтного vhost `/` и пользователя `guest`/`guest`, ожидая, что они будут описаны в самом файле определений — без этого брокер не проходил boot с ошибкой `Please create virtual host "/" prior to importing definitions.`. Добавлены `vhosts`/`users` (с валидным `password_hash` для `guest`/`guest`, по алгоритму `rabbit_password_hashing_sha256`) и `permissions`.
-14. `producer.py` вызывал `channel.confirm_delivery()` внутри `publish_message()`, то есть при каждой отправке — pika разрешает включать confirm-режим только один раз на канал, поэтому начиная со второго сообщения в лог летела ошибка `confirm_delivery: confirmation was already enabled on channel=1`. Включение confirms перенесено в `main()`, один раз на канал.
-15. **Ключевой логический баг:** `get_routing_key()` в `producer.py` всегда возвращала `order.{type}.{urgent|regular}` независимо от того, в какой exchange публикуется сообщение. Для `orders-direct` в `definitions.json` объявлен binding с фиксированным routing key `order.new` — несовпадающий routing key делал `standard`-заказы **unroutable** (сообщение молча отбрасывалось брокером, publisher confirm при этом всё равно приходил успешным, так как `mandatory` не задан). На практике это означало, что очередь `orders` никогда не получала сообщений вообще. Routing key теперь вычисляется в зависимости от целевого exchange (`order.new` для `orders-direct`, паттерн `order.{type}.{urgent|regular}` только для `orders-topic`).
-16. Из-за прошлого пункта и того, что приоритет однозначно определяется типом заказа (`PRIORITY_MAP`), у Кейса 5 (приоритетные очереди) не было реального сценария: в `orders` попадают только `standard`-заказы, а у них всегда одинаковый приоритет — сравнивать было нечего. Добавлен флаг `--priority` в `producer.py`, форсирующий приоритет независимо от типа, и обновлены шаги Кейса 5.
-17. **Ключевой логический баг в** `consumer.py`**:** retry-логика опиралась на заголовок `x-retry-count`, который должен был инкрементироваться и «доезжать» до следующей попытки через `basic_nack(requeue=True)`. Но `nack` с `requeue=True` возвращает сообщение в очередь с **неизменными** исходными properties — заголовок никогда фактически не увеличивался, и сообщение бесконечно кружило между очередью и consumer-ом, никогда не достигая `MAX_RETRIES` и DLQ (в логах это выглядело как вечные `Retrying (1/3)` для одного и того же `order_id`). Исправлено на явный `ack` исходного сообщения + `basic_publish` в ту же очередь (через nameless-exchange, routing key = имя очереди) с обновлённым заголовком — так retry-счётчик реально сохраняется между попытками.
-18. Healthcheck RabbitMQ в `docker-compose.yml`/`docker-compose.cluster.yml` имел слишком короткий бюджет ожидания (`start_period: 30s` + `retries: 5` × `interval: 15s` ≈ 105с). На практике первый старт (миграции feature flags, импорт `definitions.json`) может занимать заметно дольше — в одном из тестовых прогонов заняло 145с — из-за чего Docker помечал полностью исправный, но ещё стартующий контейнер как `unhealthy`, и зависимые сервисы не поднимались (`dependency failed to start`). Увеличены `start_period` до 90s и `retries` до 10 (бюджет ≈ 240с); `scripts/setup.sh` синхронизирован (таймаут поднят до 240с).
-
-Все перечисленные проблемы обнаружены и проверены практически: сервисы поднимались через `docker compose up`, было пройдено сквозное подтверждение работы producer → RabbitMQ → consumer → DLQ → Prometheus → Grafana.
 
 ---
 

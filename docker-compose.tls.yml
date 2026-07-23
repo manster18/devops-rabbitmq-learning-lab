@@ -1,0 +1,15 @@
+# Overlay for Bonus 1 (TLS). Does not replace the main compose file.
+#
+# Usage (from repo root, after generating certs and enabling ssl_* in rabbitmq.conf):
+#   docker compose -f docker-compose.yml -f docker-compose.tls.yml up -d rabbitmq
+#
+# Rollback:
+#   docker compose up -d rabbitmq
+#   (and remove/comment the ssl_* block in rabbitmq.conf)
+
+services:
+  rabbitmq:
+    ports:
+      - "${RABBITMQ_AMQP_TLS_PORT:-5671}:5671"
+    volumes:
+      - ./tls:/etc/rabbitmq/ssl:ro
